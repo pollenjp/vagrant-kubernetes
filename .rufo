@@ -1,0 +1,4 @@
+# .rufo
+align_case_when true
+align_chained_calls true
+trailing_commas true

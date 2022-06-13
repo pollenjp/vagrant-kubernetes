@@ -1,0 +1,5 @@
+/kubeconfig
+/.ruby-version
+/.vagrant
+*.log
+*.tmp
