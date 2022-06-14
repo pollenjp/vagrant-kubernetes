@@ -12,7 +12,7 @@
 - name: include kubeadm join token etc
   include_vars: /tmp/kubeadm-join.yaml
 - name: kubeadm join
-  command: "{{ join_command }}"  
+  command: "{{ join_command }}"
 
 ## kubeletのDNSのIPアドレスを変更
 #

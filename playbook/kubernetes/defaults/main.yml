@@ -5,13 +5,15 @@
 #
 
 # Kubernetes Package Version
-k8s_version_ubuntu: =1.14.10-00
-k8s_version_centos: 1.14.10-0
+# Check with
+#   $ apt-cache madison kubectl
+k8s_version_ubuntu: =1.24.1-00
+k8s_version_centos: 1.24.1-0
 
 # Docker Package Version
-docker_version_ubuntu: =18.06.1~ce~3-0~ubuntu
+# docker_version_ubuntu: =5:20.10.17~3-0~ubuntu-focal
+docker_version_ubuntu: ""  # latest
 docker_version_centos: 18.06.3.ce-3.el7
 
 # K8s Minor Number
 k8s_minor_ver: "{{ k8s_version.split('.')[1] }}"
-

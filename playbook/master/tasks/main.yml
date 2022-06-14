@@ -5,20 +5,33 @@
 
 ## クラスタ参加用のコマンドを作成 Ubuntu
 - name: kubeadm init for Ubuntu
-  command: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={{ ansible_facts.enp0s8.ipv4.address }} --service-cidr=10.32.0.0/24
+  command: >
+    kubeadm init
+      --pod-network-cidr=10.244.0.0/16
+      --apiserver-advertise-address={{ ansible_facts.enp0s8.ipv4.address }}
+      --service-cidr=10.32.0.0/24
+      --ignore-preflight-errors=all
   register: join_ubuntu
   when:
     - ansible_facts.distribution == "Ubuntu"
+- debug:
+    var: join_ubuntu
 ## k8sノード用コマンドを保存 Ubuntu
 - name: create kubeadm join command
-  shell: echo "join_command" ":" {{ join_ubuntu.stdout_lines[-2] }} {{ join_ubuntu.stdout_lines[-1] }} > /tmp/kubeadm-join.yaml
+  shell: >
+    echo "join_command" ":" {{ join_ubuntu.stdout_lines[-2] }} {{ join_ubuntu.stdout_lines[-1] }}
+    > /tmp/kubeadm-join.yaml
   when:
     - ansible_facts.distribution == "Ubuntu"
-  
+
 
 ## クラスタ参加用のコマンドを作成 CentOS
 - name: kubeadm init for CentOS
-  command: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address={{ ansible_facts.eth1.ipv4.address }} --service-cidr=10.32.0.0/24
+  command: >
+    kubeadm init
+      --pod-network-cidr=10.244.0.0/16
+      --apiserver-advertise-address={{ ansible_facts.eth1.ipv4.address }}
+      --service-cidr=10.32.0.0/24
   register: join_centos
   when:
     - ansible_facts.distribution == "CentOS"
@@ -51,7 +64,7 @@
     state: restarted
     daemon_reload: yes
     name: kubelet
-    
+
 ## kubeconfigディレクトリ作成
 #
 - name: mkdir kubeconfig
@@ -78,7 +91,7 @@
     owner: vagrant
     group: vagrant
     mode:  '0600'
-    
+
 - name: copy config to home dir
   copy:
     src:  /etc/kubernetes/admin.conf
@@ -99,7 +112,7 @@
 
 ## Flannelのデプロイ
 #
-- name: Deploy Flannel 
+- name: Deploy Flannel
   become_user: vagrant
   command: kubectl apply -f /home/vagrant/kube-flannel.yml
 
@@ -110,7 +123,7 @@
     url: https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
     dest: /home/vagrant/metrics-server-deployment.yaml
     mode: '0644'
-  become_user: vagrant    
+  become_user: vagrant
 
 - name: add a new line
   blockinfile:
@@ -148,7 +161,7 @@
   become_user: vagrant
   command: kubectl apply -f /home/vagrant/recommended.yaml
 - name: setup kubeconfig
-  become_user: vagrant    
+  become_user: vagrant
   shell: |
         TOKEN=$(kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret |grep kubernetes-dashboard-token-* | awk '{print $1}') |awk '$1=="token:"{print $2}')
         kubectl config set-credentials kubernetes-admin --token="${TOKEN}"

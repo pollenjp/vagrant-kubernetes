@@ -2,9 +2,10 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-linux_os = "ubuntu/bionic64"   # Ubuntu 18.04
+# linux_os = "ubuntu/bionic64"   # Ubuntu 18.04
+linux_os = "ubuntu/focal64"    # Ubuntu 20.04
 #linux_os  = "generic/centos7"  # CentOS 7.7
-bridge_if = "en0: Wi-Fi (Wireless)"
+bridge_if = "enp4s0"
 
 vm_spec = [
   {
@@ -12,7 +13,7 @@ vm_spec = [
     cpu: 2,
     memory: 2048,
     box: linux_os,
-    private_ip: "192.168.56.11",
+    public_ip: "192.168.56.11",
     storage: [],
     playbook: "install_master.yml",
     comment: "Master node",
@@ -22,7 +23,7 @@ vm_spec = [
     cpu: 4,
     memory: 8192,
     box: linux_os,
-    private_ip: "192.168.56.12",
+    public_ip: "192.168.56.12",
     storage: [],
     playbook: "install_node.yml",
     comment: "Worker node #1",
@@ -32,7 +33,7 @@ vm_spec = [
     cpu: 4,
     memory: 8192,
     box: linux_os,
-    private_ip: "192.168.56.13",
+    public_ip: "192.168.56.13",
     storage: [],
     playbook: "install_node.yml",
     comment: "Worker node #2",
@@ -44,7 +45,8 @@ Vagrant.configure("2") do |config|
     config.vm.define spec[:name] do |v|
       v.vm.box = spec[:box]
       v.vm.hostname = spec[:name]
-      v.vm.network :private_network, ip: spec[:private_ip]
+      # v.vm.network :private_network, ip: spec[:private_ip]
+      v.vm.network :public_network, ip: spec[:public_ip], bridge: bridge_if
       v.vm.provider "virtualbox" do |vbox|
         vbox.gui = false
         vbox.cpus = spec[:cpu]

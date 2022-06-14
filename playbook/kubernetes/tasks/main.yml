@@ -29,28 +29,53 @@
 ##  Docker CE のインストール
 ##################################################
 ################################################## Ubuntu
+- name: Install Docker requirements
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    update_cache: yes
+    cache_valid_time: 3600
+  when:
+    - ansible_facts.distribution == "Ubuntu"
 - name: Add Docker GPG key
-  apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
   when:
     - ansible_facts.distribution == "Ubuntu"
 - name: Add Docker APT repository
   apt_repository:
-    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_distribution_release}} stable
+    repo: >
+      deb
+      [arch=amd64]
+      https://download.docker.com/linux/ubuntu
+      {{ansible_distribution_release}}
+      stable
+  when:
+    - ansible_facts.distribution == "Ubuntu"
+- name: Install packages
+  apt:
+    name:
+      - docker-ce{{ docker_version_ubuntu }}
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
   when:
     - ansible_facts.distribution == "Ubuntu"
 - name: Install a list of packages
   apt:
-    name: "{{ packages }}"
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - nfs-common
     state: present
     update_cache: yes
-  vars:
-    packages:
-    - apt-transport-https
-    - ca-certificates
-    - curl
-    - software-properties-common
-    - nfs-common
-    - docker-ce{{ docker_version_ubuntu }}
   when:
     - ansible_facts.distribution == "Ubuntu"
 ################################################## CentOS
@@ -88,7 +113,7 @@
     - git
   when:
     - ansible_facts.distribution == "CentOS"
-################################################### Ubuntu & CentOS    
+################################################### Ubuntu & CentOS
 - name: Add the user 'vagrant' with a specific uid and a primary group of 'docker'
   user:
     name: vagrant
@@ -105,7 +130,7 @@
 ################################################### Ubuntu
 - name: Add GlusterFS Repository
   apt_repository:
-    repo: ppa:gluster/glusterfs-7
+    repo: ppa:gluster/glusterfs-10
   when:
     - ansible_facts.distribution == "Ubuntu"
 - name: Install GlusterFS client
@@ -115,13 +140,13 @@
     update_cache: yes
   when:
     - ansible_facts.distribution == "Ubuntu"
-## カーネル設定変更 
-- name: Set sysctl 
+## カーネル設定変更
+- name: Set sysctl
   sysctl:
     name: net.bridge.bridge-nf-call-iptables
     value: "1"
     sysctl_set: yes
-    sysctl_file: /etc/sysctl.conf      
+    sysctl_file: /etc/sysctl.conf
     state: present
     reload: yes
   when:
@@ -138,39 +163,54 @@
     reload: yes
   when:
     - ansible_facts.distribution == "CentOS"
-    
-###################################################  
+
+###################################################
 ## Kubernetes のインストール
 ################################################### Ubuntu
-- name: add Kubernetes apt-key
+###################################
+# Install Kubernetes requirements #
+###################################
+
+- name: install requirements
+  apt:
+    pkg:
+      - apt-transport-https
+      - gnupg2
+    update_cache: yes
+  when:
+    - ansible_facts.distribution == "Ubuntu"
+
+######################
+# Install kubernetes #
+######################
+
+- name: Add Kubernetes GPG key
+  set_fact:
+    kubernetes_keyring_path: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+- name: enroll apt key
   apt_key:
     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-    state: present
+    keyring: "{{ kubernetes_keyring_path }}"
   when:
     - ansible_facts.distribution == "Ubuntu"
-- name: add Kubernetes' APT repository
+- name: Add Kubernetes' APT repository
   apt_repository:
-    repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
-    state: present
-    filename: 'kubernetes'
+    repo: >
+      deb
+      [signed-by={{ kubernetes_keyring_path }}]
+      https://apt.kubernetes.io/
+      kubernetes-xenial
+      main
+    filename: kubernetes
   when:
     - ansible_facts.distribution == "Ubuntu"
-- name: Install kubectl
+- name: install kubernetes tools
   apt:
-    name: kubectl{{ k8s_version_ubuntu }}
-    state: present
-  when:
-    - ansible_facts.distribution == "Ubuntu"
-- name: Install kubelet
-  apt:
-    name: kubelet{{ k8s_version_ubuntu }}
-    state: present
-  when:
-    - ansible_facts.distribution == "Ubuntu"
-- name: Install kubeadm
-  apt:
-    name: kubeadm{{ k8s_version_ubuntu }}
-    state: present
+    name:
+      - kubelet{{ k8s_version_ubuntu }}
+      - kubeadm{{ k8s_version_ubuntu }}
+      - kubectl{{ k8s_version_ubuntu }}
+    update_cache: yes
   when:
     - ansible_facts.distribution == "Ubuntu"
 ################################################### CentOS
@@ -203,7 +243,7 @@
     state: started
     enabled: yes
 
-###################################################  
+###################################################
 ## Kubernetes の設定
 ################################################### Ubuntu & CentOS
 
@@ -217,7 +257,7 @@
     - ansible_facts.distribution == "Ubuntu"
 - name: change kubelet.service for CentOS
   replace:
-    dest: /etc/systemd/system/multi-user.target.wants/kubelet.service 
+    dest: /etc/systemd/system/multi-user.target.wants/kubelet.service
     regexp: 'ExecStart=/usr/bin/kubelet'
     replace: ExecStart=/usr/bin/kubelet --node-ip={{ ansible_facts.eth1.ipv4.address }} --cluster-dns=10.32.0.10
   when:
@@ -229,4 +269,7 @@
     state: restarted
     daemon_reload: yes
     name: kubelet
-
+- name: sleep
+  command: sleep 20
+- name: check kubelet
+  command: systemctl is-active kubelet.service
